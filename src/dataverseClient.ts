@@ -5,6 +5,7 @@ import { DataverseException } from './exceptions/dataverseException'
 import { DataverseMetricType } from './@types/dataverseMetricType'
 import { BasicDatasetInformation } from './@types/basicDataset'
 import { DatasetUtil } from './utils/datasetUtil'
+import request from 'request-promise'
 
 export class DataverseClient {
   private readonly host: string
@@ -84,6 +85,24 @@ export class DataverseClient {
     })
   }
 
+  // TO DO: find a way to implement this endpoint using `axios` instead of `request-promise`
+  // Using `request-promise` was the only way so far to be able to upload an image without any issues
+  public async uploadDatasetThumbnail(datasetId: string, image: any): Promise<any> {
+    const url = `${this.host}/api/datasets/${datasetId}/thumbnail`
+    const options = {
+      url,
+      headers: this.getHeaders(),
+      formData: {
+        file: image
+      },
+      resolveWithFullResponse: true
+    }
+
+    return await request.post(options).catch(error => {
+      throw new DataverseException(error.response.statusCode, error.response.data.message)
+    })
+  }
+
   public async listDataverseRoleAssignments(dataverseAlias: string): Promise<AxiosResponse> {
     const url = `${this.host}/api/dataverses/${dataverseAlias}/assignments`
     return this.getRequest(url)
@@ -98,7 +117,7 @@ export class DataverseClient {
     return this.getMetricByCountry(datasetId, metricType, undefined, yearMonth)
   }
 
-  public async getMetricByCountry(datasetId: string, metricType: DataverseMetricType, countryCode?: string, yearMonth?: string) {
+  public async getMetricByCountry(datasetId: string, metricType: DataverseMetricType, countryCode?: string, yearMonth?: string): Promise<AxiosResponse> {
     const countryQueryParam = countryCode ? `?country=${countryCode}` : ''
     const url = `${this.host}/api/datasets/${datasetId}/makeDataCount/${metricType.toString()}${yearMonth ? '/' + yearMonth : ''}${countryQueryParam}`
     return this.getRequest(url)
@@ -110,7 +129,7 @@ export class DataverseClient {
     })
   }
 
-  private async postRequest(url: string, data: string | object, options: { params?: object, headers?: DataverseHeaders } = { headers: this.getHeaders() }) {
+  private async postRequest(url: string, data: string | object, options: { params?: object, headers?: DataverseHeaders } = { headers: this.getHeaders() }): Promise<AxiosResponse> {
     return await axios.post(url, JSON.stringify(data), options).catch(error => {
       throw new DataverseException(error.response.status, error.response.data.message)
     })
